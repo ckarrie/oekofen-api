@@ -95,7 +95,7 @@ class Oekofen(object):
                 return attribute_instance.get_value()
         return None
 
-    def get_attribute(self, domain: str, attribute: str, domain_index: int = 1):
+    def get_attribute(self, domain: str, attribute: str, domain_index: int = 1) -> Attribute:
         return self._get_value(domain=domain, attribute=attribute, domain_index=domain_index, return_attribute=True)
 
     async def _send_set_value(self, domain_attribute: str, value: str):
@@ -130,6 +130,15 @@ class Oekofen(object):
 
     def get_heating_circuit_temp(self) -> float:
         return self._get_value('hk', 'temp_heat')
+
+    def get_model(self) -> str:
+        attr = self.get_attribute('pe', 'L_type')
+        return attr.get_choice()
+
+    def get_uid(self):
+        model = self.get_model().lower().replace(' ', '_')
+        host = self.host.replace('.', '_')
+        return f'oekofen_{model}_{host}'
 
     async def set_heating_circuit_temp(self, celsius: float, domain_index: int = 1) -> bool:
         att = self.get_attribute('hk', 'temp_heat', domain_index=domain_index)
@@ -199,6 +208,10 @@ class Attribute(object):
         if self.unit:
             return f'{self.get_value()} {self.unit}'
         return self.get_value()
+
+    def get_choice(self):
+        if self.choices:
+            return self.choices.get(self.raw_value)
 
 
 class ControllableAttribute(Attribute):
