@@ -3,13 +3,15 @@ from setuptools import setup, find_packages
 with open("README.md", "r") as f:
     long_description = f.read()
 
+VERSION = "0.0.3"
+
 setup(
     name="oekofen_api",
-    version="0.0.3",
+    version=VERSION,
     author="Christian Karrié",
     author_email="ckarrie@gmail.com",
     description="A python library to retrieve statistics from your Oekofen Pelletronic",
-    download_url='https://github.com/ckarrie/oekofen-api/archive/refs/tags/v0.0.3.tar.gz',
+    download_url=f'https://github.com/ckarrie/oekofen-api/archive/refs/tags/v{VERSION}.tar.gz',
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/ckarrie/oekofen-api",

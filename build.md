@@ -33,12 +33,7 @@ cd ~/workspace/src/oekofen-api
 nano setup.py
 ```
 ```python
-setup(
-    ...
-    version="0.0.2",
-    download_url='https://github.com/ckarrie/oekofen-api/archive/refs/tags/v0.0.2.tar.gz',
-    ...
-)
+VERSION = "0.0.3"
 
 ```
 
@@ -64,4 +59,4 @@ pip install oekofen-api==<NEUE VERSIONSNUMMER>
 ```
 
 ## Update homeassistant-oekofen
-neue Version in der `manifest.json` anpaasen
+neue Version in der `manifest.json` anpassen
