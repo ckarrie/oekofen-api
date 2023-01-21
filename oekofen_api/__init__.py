@@ -7,6 +7,8 @@ import re
 from datetime import datetime
 
 from voluptuous import Optional
+from yarl import URL
+
 from . import const
 
 logger = logging.getLogger(__name__)
@@ -52,20 +54,21 @@ class Oekofen(object):
                 # Attribute part
                 domain.update_attributes(data=attributes_dict)
 
-        return self._data
-
-    async def _fetch_data(self, path) -> Optional(dict):
+    async def _fetch_data(self, path, is_json=True) -> Optional(dict):
         raw_url = f'{self.base_url}{path}'
+        print("_fetch_data", raw_url)
         async with aiohttp.ClientSession(raise_for_status=True) as session:
             try:
                 resp = await session.get(raw_url)
                 if resp.status == 200:
-                    # no content type send from host, accepting all
-                    json_response = await resp.json(content_type=None)
-                    if json_response is not None:
-                        return json_response
-                    else:
-                        return None
+                    # no content type send from host, accepting all with content_type=None
+                    if is_json:
+                        json_response = await resp.json(content_type=None)
+                        if json_response is not None:
+                            return json_response
+                        else:
+                            return None
+                    return True
 
             except Exception as e:
                 logger.error(e)
@@ -77,36 +80,60 @@ class Oekofen(object):
             return False
         return True
 
-    async def get_status(self):
-        self._status = await self._get_value("pe", "L_statetext")
-        return self._status
-
-    async def get_weather_temp(self):
-        v = await self._get_value('weather', 'L_temp')
-        return v
-
-    async def _get_value(self, domain: str, attribute: str, domain_index: int = 1):
-        if not self._has_valid_data():
-            await self.update_data()
-
+    def _get_value(self, domain: str, attribute: str, domain_index: int = 1, return_attribute=False):
         if domain_index < 1:
+            return None
+        if not self.domains:
             return None
         domains = self.domains.get(domain, [])
         if len(domains) > (domain_index - 1):
             domain_instance = domains[domain_index - 1]
             attribute_instance = domain_instance.attributes.get(attribute, None)
             if attribute_instance is not None:
+                if return_attribute:
+                    return attribute_instance
                 return attribute_instance.get_value()
         return None
 
-    def _set_value(self, domain_attribute: str, value: str):
+    def get_attribute(self, domain: str, attribute: str, domain_index: int = 1):
+        return self._get_value(domain=domain, attribute=attribute, domain_index=domain_index, return_attribute=True)
+
+    async def _send_set_value(self, domain_attribute: str, value: str):
         """
 
         :param domain_attribute: i.e. "hk1.mode_auto"
         :param value: "0"
         :return:
         """
-        url = self.base_url + '{domain_attribute}={value}'.format(domain_attribute=domain_attribute, value=value)
+        path = URL().with_name(f'{domain_attribute}={value}')
+        return await self._fetch_data(path=str(path), is_json=False)
+
+    async def set_attribute_value(self, att: Attribute, value):
+        if not isinstance(att, ControllableAttribute):
+            return False
+        val = att.generate_new_value(value=value, value_in_human_format=True)
+        dom_att = f'{att.domain.name}{att.domain.index}.{att.key}'
+        value_set = await self._send_set_value(domain_attribute=dom_att, value=val)
+        return value_set
+
+    # Popular queries
+
+    def get_status(self):
+        self._status = self._get_value("pe", "L_statetext")
+        return self._status
+
+    def get_weather_temp(self):
+        return self._get_value('weather', 'L_temp')
+
+    def get_heating_circuit_state(self) -> str:
+        return self._get_value('hk', 'L_statetext')
+
+    def get_heating_circuit_temp(self) -> float:
+        return self._get_value('hk', 'temp_heat')
+
+    async def set_heating_circuit_temp(self, celsius: float, domain_index: int = 1) -> bool:
+        att = self.get_attribute('hk', 'temp_heat', domain_index=domain_index)
+        return await self.set_attribute_value(att, celsius)
 
 
 class Domain(object):
@@ -144,6 +171,7 @@ class Attribute(object):
         self.factor: float | int | None = data.get(const.JSON_KEY_FACTOR, None)
         self.min: float | int | None = data.get(const.JSON_KEY_MINIMUM, None)
         self.max: float | int | None = data.get(const.JSON_KEY_MAXIMUM, None)
+        self.length: int | None = data.get(const.JSON_KEY_LENGTH, None)
         self.choices = None
         self.domain: Domain = domain
         if self.format:
@@ -174,15 +202,41 @@ class Attribute(object):
 
 
 class ControllableAttribute(Attribute):
-    def set(self, value, value_is_normalized=False):
-        if self.factor and not value_is_normalized:
-            value = value * self.factor
-        if self.min < value < self.max:
-            print("Okay setting value %s" % value)
-        else:
-            print("Not Okay setting value %s" % value)
+    def generate_new_value(self, value, value_in_human_format=True):
+        """
+
+        :param value:
+        :param value_in_human_format: True if temperature in `value` is in celsius and needs convertions 15 °C -> 150
+        :return:
+        """
+        if isinstance(self.raw_value, (float, int)) and isinstance(value, (float, int)):
+            if self.factor and value_in_human_format:
+                value = int(value / self.factor)
+            if self.min < value < self.max:
+                print("Okay setting value %s" % value)
+                return value
+            else:
+                raise ValueOutOfBoundaryError("setting value %s, min=%s, max=%s" % (value, self.min, self.max))
+
+        if isinstance(self.raw_value, str) and isinstance(value, str):
+            if self.length is not None:
+                if len(value) > self.length:
+                    value = value[:self.length]
+                return value
+
+        return value
 
 
 class MyOekofen(object):
     def __init__(self):
         pass
+
+
+class OekofenAPIException(Exception):
+    pass
+
+
+class ValueOutOfBoundaryError(OekofenAPIException):
+    pass
+
+

@@ -5,10 +5,11 @@ with open("README.md", "r") as f:
 
 setup(
     name="oekofen_api",
-    version="0.0.1",
+    version="0.0.2",
     author="Christian Karrié",
     author_email="ckarrie@gmail.com",
     description="A python library to retrieve statistics from your Oekofen Pelletronic",
+    download_url='https://github.com/ckarrie/oekofen-api/archive/refs/tags/v0.0.2.tar.gz',
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/ckarrie/oekofen-api",
