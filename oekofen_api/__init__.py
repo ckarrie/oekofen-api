@@ -117,6 +117,8 @@ class Oekofen(object):
         return value_set
 
     # Popular queries
+    def get_name(self):
+        return f'Oekofen ({self.host})'
 
     def get_status(self):
         self._status = self._get_value("pe", "L_statetext")
