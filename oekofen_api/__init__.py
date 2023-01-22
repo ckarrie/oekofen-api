@@ -36,6 +36,7 @@ class Oekofen(object):
         if not self._has_valid_data():
             self._data = await self._fetch_data(path=const.URL_PATH_ALL_WITH_FORMATS)
             self._last_fetch = datetime.now()
+            self.domains = OrderedDict()
 
             # Domain part
             for domain_with_index, attributes_dict in self._data.items():

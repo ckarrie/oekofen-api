@@ -23,7 +23,7 @@ cd ~/workspace/src/oekofen-api
 - Mit git changes pushen
 
 ### github Release erstellen
-- https://github.com/ckarrie/oekofen-api/releases/new
+- https://github.com/ckarr ie/oekofen-api/releases/new
 - Tag (create new): v0.0.4
 - Title: v0.0.4
 - Button "Publish Release"
