@@ -34,3 +34,14 @@ while True:
 
 
 ```
+
+
+## Todo
+
+- dont use `domains` and `attributes`- make it less complicate and pass dict to homeassistant, then use data scheme like netgear integration
+
+
+## References
+
+- https://github.com/JbPasquier/pyokofen/blob/master/pyokofen/okofen.py
+- 

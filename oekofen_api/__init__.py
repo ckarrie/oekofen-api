@@ -18,7 +18,8 @@ class Oekofen(object):
     def __init__(self, host: str, json_password: str, port: int = const.DEFAULT_PORT, update_interval: int = const.UPDATE_INTERVAL_SECONDS):
         self.host = host
         self.update_interval = update_interval
-        self._data = {}
+        self._raw_data = {}
+        self.data = {}
         self._last_fetch = datetime.now()
         self._status = None
         self.domains = OrderedDict()
@@ -34,17 +35,25 @@ class Oekofen(object):
 
     async def update_data(self):
         if not self._has_valid_data():
-            self._data = await self._fetch_data(path=const.URL_PATH_ALL_WITH_FORMATS)
+            self._raw_data = await self._fetch_data(path=const.URL_PATH_ALL_WITH_FORMATS)
             self._last_fetch = datetime.now()
             self.domains = OrderedDict()
 
+            self.data = {
+                'hk_indexes': [],
+                'pu_indexes': [],
+                'ww_indexes': [],
+                'circ_indexes': [],
+                'pe_indexes': [],
+            }
+
             # Domain part
-            for domain_with_index, attributes_dict in self._data.items():
+            for domain_with_index, attributes_dict in self._raw_data.items():
                 index_nrs = re.findall(const.RE_FIND_NUMBERS, domain_with_index)
                 if index_nrs:
-                    index_nr = index_nrs[0]
+                    index_nr = int(index_nrs[0])
                 else:
-                    index_nr = 0
+                    index_nr = None
                 domain_name = domain_with_index.replace(str(index_nr), '')
                 domain = Domain(oekofen=self, name=domain_name, index=index_nr)
                 if domain_name in self.domains:
@@ -52,8 +61,22 @@ class Oekofen(object):
                 else:
                     self.domains[domain_name] = [domain]
 
+                if index_nr is not None:
+                    self.data.setdefault(f'{domain_name}_indexes', [])
+                    self.data[f'{domain_name}_indexes'].append(index_nr)
+
                 # Attribute part
                 domain.update_attributes(data=attributes_dict)
+
+                # data-Part
+                for att_key, att_value in attributes_dict.items():
+                    if index_nr is None:
+                        index_nr = 1
+                    att_rendered_value = self._get_value(domain=domain_name, attribute=att_key, domain_index=index_nr)
+                    self.data[f'{domain_with_index}.{att_key}'] = att_rendered_value
+
+            if isinstance(self.data, dict) and 'system.system_info' in self.data:
+                return self.data
 
     async def _fetch_data(self, path, is_json=True) -> Optional(dict):
         raw_url = f'{self.base_url}{path}'
@@ -77,7 +100,7 @@ class Oekofen(object):
 
     def _has_valid_data(self):
         data_is_old = (datetime.now() - self._last_fetch).total_seconds() >= self.update_interval
-        if (not self._data) or data_is_old:
+        if (not self._raw_data) or data_is_old:
             return False
         return True
 
