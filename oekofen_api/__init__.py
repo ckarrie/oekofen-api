@@ -5,7 +5,6 @@ import logging
 import aiohttp
 import re
 from datetime import datetime
-
 from voluptuous import Optional
 from yarl import URL
 
@@ -74,6 +73,14 @@ class Oekofen(object):
                         index_nr = 1
                     att_rendered_value = self._get_value(domain=domain_name, attribute=att_key, domain_index=index_nr)
                     self.data[f'{domain_with_index}.{att_key}'] = att_rendered_value
+                    # special
+                    att_instance = self.get_attribute(domain_name, att_key, index_nr)
+                    if att_instance.choices is not None:
+                        self.data[f'{domain_with_index}.{att_key}_choice'] = att_instance.get_choice()
+                    if att_instance.min is not None:
+                        self.data[f'{domain_with_index}.{att_key}_min'] = att_instance.get_min_value()
+                    if att_instance.max is not None:
+                        self.data[f'{domain_with_index}.{att_key}_max'] = att_instance.get_max_value()
 
             if isinstance(self.data, dict) and 'system.system_info' in self.data:
                 return self.data
@@ -216,19 +223,21 @@ class Attribute(object):
         cls_name = self.__class__.__name__
         return f"{cls_name}({self.key}={self.get_value_with_unit()})"
 
-    def get_value(self):
-        if self.raw_value:
+    def get_value(self, value=None):
+        if not value:
+            value = self.raw_value
+        if value is not None:
             if self.factor is not None:
                 # i.e. temperature
-                return self.raw_value * self.factor
+                v = value * self.factor
+                return float("{:.2f}".format(round(v, 2)))
             if self.format == const.OFF_ON_TEXT:
                 # bool on/off
-                if self.raw_value == 0:
+                if value == 0:
                     return False
                 else:
                     return True
-
-        return self.raw_value
+        return value
 
     def get_value_with_unit(self) -> str:
         if self.unit:
@@ -238,6 +247,14 @@ class Attribute(object):
     def get_choice(self):
         if self.choices:
             return self.choices.get(self.raw_value)
+
+    def get_min_value(self):
+        if self.min is not None:
+            return self.get_value(value=self.min)
+
+    def get_max_value(self):
+        if self.max is not None:
+            return self.get_value(value=self.max)
 
 
 class ControllableAttribute(Attribute):
