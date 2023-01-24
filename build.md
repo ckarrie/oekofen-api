@@ -24,8 +24,8 @@ cd ~/workspace/src/oekofen-api
 
 ### github Release erstellen
 - https://github.com/ckarrie/oekofen-api/releases/new
-- Tag (create new): v0.0.10
-- Title: v0.0.10
+- Tag (create new): v0.0.11
+- Title: v0.0.11
 - Button "Publish Release"
 
 ### Anpassen in setup.py
@@ -33,7 +33,7 @@ cd ~/workspace/src/oekofen-api
 nano setup.py
 ```
 ```python
-VERSION = "0.0.10"
+VERSION = "0.0.11"
 
 ```
 

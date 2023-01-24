@@ -39,6 +39,10 @@ class Oekofen(object):
             self.domains = OrderedDict()
 
             self.data = {
+                'system_indexes': [''],     # empty domain
+                'weather_indexes': [''],    # empty domain
+                'forecast_indexes': [''],   # empty domain
+                'error_indexes': [''],      # empty domain
                 'hk_indexes': [],
                 'pu_indexes': [],
                 'ww_indexes': [],

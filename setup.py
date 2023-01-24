@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 with open("README.md", "r") as f:
     long_description = f.read()
 
-VERSION = "0.0.10"
+VERSION = "0.0.11"
 
 setup(
     name="oekofen_api",
