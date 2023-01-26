@@ -18,6 +18,7 @@ class Oekofen(object):
         self.host = host
         self.update_interval = update_interval
         self._raw_data = {}
+        self._csv_data = OrderedDict()
         self.data = {}
         self._last_fetch = datetime.now()
         self._status = None
@@ -34,7 +35,7 @@ class Oekofen(object):
 
     async def update_data(self):
         if not self._has_valid_data():
-            self._raw_data = await self._fetch_data(path=const.URL_PATH_ALL_WITH_FORMATS)
+            self._raw_data = await self._fetch_data(path=const.URL_PATH_ALL_WITH_FORMATS, is_json=True)
             self._last_fetch = datetime.now()
             self.domains = OrderedDict()
 
@@ -89,7 +90,57 @@ class Oekofen(object):
             if isinstance(self.data, dict) and 'system.system_info' in self.data:
                 return self.data
 
-    async def _fetch_data(self, path, is_json=True) -> Optional(dict):
+    async def get_version(self):
+        text_data = await self._fetch_data('??', is_json=False, is_text=True)
+        first_line = text_data.split('\n')[0].split(const.VERSION_SEPERATOR)
+        # "['Oekofen JSON Interface', 'V4.00b', 'http://www.oekofen.at']"
+        if len(first_line) == 3:
+            return first_line[1]
+
+    async def update_csv_data(self):
+        # URL http://192.168.178.222:4321/eMlG/log
+        self._csv_data = OrderedDict()
+        csv_data = await self._fetch_data('log', is_json=False, is_text=True)
+        csv_lines = csv_data.split('\r\n')
+        cnt_csv_lines = len(csv_lines)
+        first_line_splitted = csv_lines[0].split(';')
+        last_line_splitted = csv_lines[cnt_csv_lines - 2].split(';')
+
+        dt_day = datetime.now().replace(microsecond=0)
+
+        print("len(first_line_splitted)", len(first_line_splitted))
+        print("len(last_line_splitted)", len(last_line_splitted))
+
+        for col, content in enumerate(first_line_splitted):
+            content = content.replace("[»C]", "[°C]")
+            raw_value = last_line_splitted[col]
+            print("- ", col, content, raw_value)
+            if ',' in raw_value:
+                value = float(raw_value.replace(",", "."))
+            elif '.' in raw_value and len(raw_value.split('.')) == 3:
+                day = int(raw_value.split('.')[0])
+                month = int(raw_value.split('.')[1])
+                year = int(raw_value.split('.')[2])
+                dt_day = dt_day.replace(year=year, month=month, day=day)
+                value = dt_day.date()
+            elif ':' in raw_value and len(raw_value.split(':')) == 3:
+                t_hour = int(raw_value.split(':')[0])
+                t_min = int(raw_value.split(':')[1])
+                t_sec = int(raw_value.split(':')[2])
+                dt_day = dt_day.replace(hour=t_hour, minute=t_min, second=t_sec)
+                value = dt_day.time()
+                self._csv_data['timestamp'] = dt_day
+            elif raw_value.isdigit():
+                value = int(raw_value)
+            else:
+                value = raw_value
+
+            content = content.rstrip()
+            if len(content):
+                self._csv_data[content] = value
+        return self._csv_data
+
+    async def _fetch_data(self, path, is_json=True, is_text=False) -> Optional(dict):
         raw_url = f'{self.base_url}{path}'
         print("_fetch_data", raw_url)
         async with aiohttp.ClientSession(raise_for_status=True) as session:
@@ -103,6 +154,11 @@ class Oekofen(object):
                             return json_response
                         else:
                             return None
+                    if is_text:
+                        #body = await resp.read()
+                        #print(body)
+                        #return await resp.text(encoding='latin-1')
+                        return await resp.text()
                     return True
 
             except Exception as e:
@@ -232,7 +288,7 @@ class Attribute(object):
             value = self.raw_value
         if value is not None:
             if self.factor is not None:
-                # i.e. temperature
+                # i.e. temperature or zs (zehntelsekunden, 0,1 seconds)
                 v = value * self.factor
                 return float("{:.2f}".format(round(v, 2)))
             if self.format == const.OFF_ON_TEXT:

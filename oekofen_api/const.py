@@ -99,3 +99,4 @@ PUMP_STATE_OFF = 0
 PUMP_STATE_ON = 1
 
 # "ww": domestic hot water data
+VERSION_SEPERATOR = '   '
