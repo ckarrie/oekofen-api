@@ -49,6 +49,7 @@ class Oekofen(object):
                 'ww_indexes': [],
                 'circ_indexes': [],
                 'pe_indexes': [],
+                'sk_indexes': [],
             }
 
             # Domain part
