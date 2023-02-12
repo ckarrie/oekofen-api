@@ -42,18 +42,24 @@ while True:
 
 ## Todo
 
-- dont use `domains` and `attributes`- make it less complicate and pass dict to homeassistant, then use data scheme like netgear integration
+- ~~dont use `domains` and `attributes`- make it less complicate and pass dict to homeassistant, then use data scheme like netgear integration~~
+- add historical data via csv api and HASS `async_external_statistics`
+  - https://github.com/home-assistant/core/blob/74e2d5c5c312cf3ba154b5206ceb19ba884c6fb4/homeassistant/components/tibber/sensor.py#L642
+  - https://github.com/home-assistant/core/blob/74e2d5c5c312cf3ba154b5206ceb19ba884c6fb4/homeassistant/components/demo/__init__.py#L236
+  - https://github.com/home-assistant/core/blob/74e2d5c5c312cf3ba154b5206ceb19ba884c6fb4/homeassistant/components/recorder/statistics.py#L1335-L1362
+  - see [forum](https://community.home-assistant.io/t/import-old-energy-readings-for-use-in-energy-dashboard/341406/9)
 
 
-## References
+## Online Resources
 
-- https://github.com/JbPasquier/pyokofen/blob/master/pyokofen/okofen.py
-- http://192.168.178.222:4321/eMlG/all?
-- https://pypi.org/project/oekofen-api/
-- https://developers.home-assistant.io/docs/core/entity/binary-sensor
-- https://github.com/home-assistant/core/blob/master/homeassistant/components/binary_sensor/__init__.py
-- http://0.0.0.0:8123/lovelace/0
-- https://materialdesignicons.com/
+- [pyOekofen implementation by JbPasquier](https://github.com/JbPasquier/pyokofen/blob/master/pyokofen/okofen.py)
+- [Local Pellematic JSON page](http://192.168.178.222:4321/eMlG/all?)
+- [This repository on pypi](https://pypi.org/project/oekofen-api/)
+- [HomeAssistant BinarySensor Documentation](https://developers.home-assistant.io/docs/core/entity/binary-sensor)
+- [HomeAssistant BinarySensor Source](https://github.com/home-assistant/core/blob/master/homeassistant/components/binary_sensor/__init__.py)
+- [Local Homeassistant Instance](http://0.0.0.0:8123/lovelace/0)
+- [Material Icons](https://materialdesignicons.com/)
+- [Abkürzungen Sanitär](http://www.bosy-online.de/abkuerzungen_im_shk-handwerk.htm)
 
 ## Berechnung Pelletsverbrauch
 
