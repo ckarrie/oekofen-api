@@ -279,6 +279,29 @@ class Attribute(object):
         self.domain: Domain = domain
         if self.format:
             self.choices = const.format2dict(self.format)
+            
+        # convert numbers in strings to int/float
+        if isinstance(self.factor, str):
+            self.factor = float(self.factor)
+            if self.factor == float(1):
+                self.raw_value = int(self.raw_value)
+            else:
+                self.raw_value = float(self.raw_value)
+            if self.min is not None:
+                self.min = float(self.min)
+            if self.max is not None:
+                self.max = float(self.max)
+        if isinstance(self.length, str):
+            self.length = int(self.length)
+
+        # keys with "format" can have non-int values as well
+        if isinstance(self.format, str) and isinstance(self.raw_value, str):
+            if self.raw_value == "false":
+                self.raw_value = 0
+            elif self.raw_value == "true":
+                self.raw_value = 1
+            else:
+                self.raw_value = int(self.raw_value)
 
     def __repr__(self):
         cls_name = self.__class__.__name__
