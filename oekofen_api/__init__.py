@@ -204,7 +204,10 @@ class Oekofen(object):
         if not isinstance(att, ControllableAttribute):
             return False
         val = att.generate_new_value(value=value, value_in_human_format=True)
-        dom_att = f'{att.domain.name}{att.domain.index}.{att.key}'
+        if att.domain.index is None:
+            dom_att = f'{att.domain.name}.{att.key}'
+        else:
+            dom_att = f'{att.domain.name}{att.domain.index}.{att.key}'
         value_set = await self._send_set_value(domain_attribute=dom_att, value=val)
         return value_set
 
