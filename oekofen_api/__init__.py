@@ -364,7 +364,7 @@ class ControllableAttribute(Attribute):
             if self.factor and value_in_human_format:
                 value = int(value / self.factor)
 
-            if virtual_min is not None and virtual_max is not None and virtual_min < value < virtual_max:
+            if virtual_min is not None and virtual_max is not None and virtual_min <= value <= virtual_max:
                 print("Okay setting value %s" % value)
                 return value
             else:
