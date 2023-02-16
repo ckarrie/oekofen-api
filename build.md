@@ -39,6 +39,10 @@ VERSION = "0.0.14"
 ```
 
 ```
+cd ~/workspace/venvs/homeassistant-oekofen/
+source bin/activate
+cd ~/workspace/src/oekofen-api/
+
 rm -rf dist
 python3 -m build
 ```
@@ -56,7 +60,7 @@ twine upload dist/*
 Lokal updaten
 
 ```
-pip install oekofen-api==0.0.4
+pip install oekofen-api==0.0.14
 ```
 
 ## Update homeassistant-oekofen

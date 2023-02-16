@@ -4,7 +4,7 @@ import json
 import random
 from flask import Flask, Response
 
-
+# Content of 'PASS/all?'
 dummy_data = {
    "system":{
       "system_info":"system global variables",
@@ -161,7 +161,8 @@ dummy_data = {
    }
 }
 
-dummy_error_text = "Oekofen JSON Interface   V4.00b   http://www.oekofen.at"
+# First line of 'PASS/??'
+dummy_error_text = "http://www.oekofen.at"
 
 
 app = Flask(__name__)

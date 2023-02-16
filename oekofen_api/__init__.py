@@ -349,14 +349,26 @@ class ControllableAttribute(Attribute):
         :param value_in_human_format: True if temperature in `value` is in celsius and needs convertions 15 °C -> 150
         :return:
         """
+
+        virtual_min = None
+        virtual_max = None
+        
+        if self.choices:
+            virtual_min = min(self.choices.keys())
+            virtual_max = max(self.choices.keys())
+        if self.min is not None and self.max is not None:
+            virtual_min = self.min
+            virtual_max = self.max
+
         if isinstance(self.raw_value, (float, int)) and isinstance(value, (float, int)):
             if self.factor and value_in_human_format:
                 value = int(value / self.factor)
-            if self.min < value < self.max:
+
+            if virtual_min is not None and virtual_max is not None and virtual_min < value < virtual_max:
                 print("Okay setting value %s" % value)
                 return value
             else:
-                raise ValueOutOfBoundaryError("setting value %s, min=%s, max=%s" % (value, self.min, self.max))
+                raise ValueOutOfBoundaryError("setting value %s, min=%s, max=%s" % (value, virtual_min, virtual_max))
 
         if isinstance(self.raw_value, str) and isinstance(value, str):
             if self.length is not None:
