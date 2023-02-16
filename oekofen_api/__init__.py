@@ -352,7 +352,7 @@ class ControllableAttribute(Attribute):
 
         virtual_min = None
         virtual_max = None
-        
+
         if self.choices:
             virtual_min = min(self.choices.keys())
             virtual_max = max(self.choices.keys())
