@@ -4,6 +4,7 @@ from collections import OrderedDict
 import logging
 import re
 import json
+import time
 from datetime import datetime
 from voluptuous import Optional
 from yarl import URL
@@ -16,7 +17,13 @@ logger = logging.getLogger(__name__)
 
 
 class Oekofen(object):
-    def __init__(self, host: str, json_password: str, port: int = const.DEFAULT_PORT, update_interval: int = const.UPDATE_INTERVAL_SECONDS):
+    def __init__(
+        self,
+        host: str,
+        json_password: str,
+        port: int = const.DEFAULT_PORT,
+        update_interval: int = const.UPDATE_INTERVAL_SECONDS,
+    ):
         self.host = host
         self.update_interval = update_interval
         self._raw_data = {}
@@ -26,32 +33,32 @@ class Oekofen(object):
         self._status = None
         self.domains = OrderedDict()
         self.base_url = const.BASE_URL_TMPL.format(
-            host=host,
-            port=port,
-            json_password=json_password
+            host=host, port=port, json_password=json_password
         )
 
     def __repr__(self):
         cls_name = self.__class__.__name__
         return f"{cls_name}({self.host})"
 
-    async def update_data(self):
+    def update_data(self):
         if not self._has_valid_data():
-            self._raw_data = await self._fetch_data(path=const.URL_PATH_ALL_WITH_FORMATS, is_json=True)
+            self._raw_data = self._fetch_data(
+                path=const.URL_PATH_ALL_WITH_FORMATS, is_json=True
+            )
             self._last_fetch = datetime.now()
             self.domains = OrderedDict()
 
             self.data = {
-                'system_indexes': [''],     # empty domain
-                'weather_indexes': [''],    # empty domain
-                'forecast_indexes': [''],   # empty domain
-                'error_indexes': [''],      # empty domain
-                'hk_indexes': [],
-                'pu_indexes': [],
-                'ww_indexes': [],
-                'circ_indexes': [],
-                'pe_indexes': [],
-                'sk_indexes': [],
+                "system_indexes": [""],  # empty domain
+                "weather_indexes": [""],  # empty domain
+                "forecast_indexes": [""],  # empty domain
+                "error_indexes": [""],  # empty domain
+                "hk_indexes": [],
+                "pu_indexes": [],
+                "ww_indexes": [],
+                "circ_indexes": [],
+                "pe_indexes": [],
+                "sk_indexes": [],
             }
 
             # Domain part
@@ -61,7 +68,7 @@ class Oekofen(object):
                     index_nr = int(index_nrs[0])
                 else:
                     index_nr = None
-                domain_name = domain_with_index.replace(str(index_nr), '')
+                domain_name = domain_with_index.replace(str(index_nr), "")
                 domain = Domain(oekofen=self, name=domain_name, index=index_nr)
                 if domain_name in self.domains:
                     self.domains[domain_name].append(domain)
@@ -69,8 +76,8 @@ class Oekofen(object):
                     self.domains[domain_name] = [domain]
 
                 if index_nr is not None:
-                    self.data.setdefault(f'{domain_name}_indexes', [])
-                    self.data[f'{domain_name}_indexes'].append(index_nr)
+                    self.data.setdefault(f"{domain_name}_indexes", [])
+                    self.data[f"{domain_name}_indexes"].append(index_nr)
 
                 # Attribute part
                 domain.update_attributes(data=attributes_dict)
@@ -79,35 +86,43 @@ class Oekofen(object):
                 for att_key, att_value in attributes_dict.items():
                     if index_nr is None:
                         index_nr = 1
-                    att_rendered_value = self._get_value(domain=domain_name, attribute=att_key, domain_index=index_nr)
-                    self.data[f'{domain_with_index}.{att_key}'] = att_rendered_value
+                    att_rendered_value = self._get_value(
+                        domain=domain_name, attribute=att_key, domain_index=index_nr
+                    )
+                    self.data[f"{domain_with_index}.{att_key}"] = att_rendered_value
                     # special
                     att_instance = self.get_attribute(domain_name, att_key, index_nr)
                     if att_instance.choices is not None:
-                        self.data[f'{domain_with_index}.{att_key}_choice'] = att_instance.get_choice()
+                        self.data[
+                            f"{domain_with_index}.{att_key}_choice"
+                        ] = att_instance.get_choice()
                     if att_instance.min is not None:
-                        self.data[f'{domain_with_index}.{att_key}_min'] = att_instance.get_min_value()
+                        self.data[
+                            f"{domain_with_index}.{att_key}_min"
+                        ] = att_instance.get_min_value()
                     if att_instance.max is not None:
-                        self.data[f'{domain_with_index}.{att_key}_max'] = att_instance.get_max_value()
+                        self.data[
+                            f"{domain_with_index}.{att_key}_max"
+                        ] = att_instance.get_max_value()
 
-            if isinstance(self.data, dict) and 'system.system_info' in self.data:
+            if isinstance(self.data, dict) and "system.system_info" in self.data:
                 return self.data
 
-    async def get_version(self):
-        text_data = await self._fetch_data('??', is_json=False, is_text=True)
-        first_line = text_data.split('\n')[0].split(const.VERSION_SEPERATOR)
+    def get_version(self):
+        text_data = self._fetch_data("??", is_json=False, is_text=True)
+        first_line = text_data.split("\n")[0].split(const.VERSION_SEPERATOR)
         # "['Oekofen JSON Interface', 'V4.00b', 'http://www.oekofen.at']"
         if len(first_line) == 3:
             return first_line[1]
 
-    async def update_csv_data(self):
+    def update_csv_data(self):
         # URL http://192.168.178.222:4321/eMlG/log
         self._csv_data = OrderedDict()
-        csv_data = await self._fetch_data('log', is_json=False, is_text=True)
-        csv_lines = csv_data.split('\r\n')
+        csv_data = self._fetch_data("log", is_json=False, is_text=True)
+        csv_lines = csv_data.split("\r\n")
         cnt_csv_lines = len(csv_lines)
-        first_line_splitted = csv_lines[0].split(';')
-        last_line_splitted = csv_lines[cnt_csv_lines - 2].split(';')
+        first_line_splitted = csv_lines[0].split(";")
+        last_line_splitted = csv_lines[cnt_csv_lines - 2].split(";")
 
         dt_day = datetime.now().replace(microsecond=0)
 
@@ -118,21 +133,21 @@ class Oekofen(object):
             content = content.replace("[»C]", "[°C]")
             raw_value = last_line_splitted[col]
             print("- ", col, content, raw_value)
-            if ',' in raw_value:
+            if "," in raw_value:
                 value = float(raw_value.replace(",", "."))
-            elif '.' in raw_value and len(raw_value.split('.')) == 3:
-                day = int(raw_value.split('.')[0])
-                month = int(raw_value.split('.')[1])
-                year = int(raw_value.split('.')[2])
+            elif "." in raw_value and len(raw_value.split(".")) == 3:
+                day = int(raw_value.split(".")[0])
+                month = int(raw_value.split(".")[1])
+                year = int(raw_value.split(".")[2])
                 dt_day = dt_day.replace(year=year, month=month, day=day)
                 value = dt_day.date()
-            elif ':' in raw_value and len(raw_value.split(':')) == 3:
-                t_hour = int(raw_value.split(':')[0])
-                t_min = int(raw_value.split(':')[1])
-                t_sec = int(raw_value.split(':')[2])
+            elif ":" in raw_value and len(raw_value.split(":")) == 3:
+                t_hour = int(raw_value.split(":")[0])
+                t_min = int(raw_value.split(":")[1])
+                t_sec = int(raw_value.split(":")[2])
                 dt_day = dt_day.replace(hour=t_hour, minute=t_min, second=t_sec)
                 value = dt_day.time()
-                self._csv_data['timestamp'] = dt_day
+                self._csv_data["timestamp"] = dt_day
             elif raw_value.isdigit():
                 value = int(raw_value)
             else:
@@ -143,8 +158,10 @@ class Oekofen(object):
                 self._csv_data[content] = value
         return self._csv_data
 
-    async def _fetch_data(self, path, is_json=True, is_text=False, retry=True) -> Optional(dict):
-        raw_url = f'{self.base_url}{path}'
+    def _fetch_data(
+        self, path, is_json=True, is_text=False, retry=True
+    ) -> Optional(dict):
+        raw_url = f"{self.base_url}{path}"
         print("_fetch_data using urllib.request.urlopen", raw_url)
         try:
             resp = urllib.request.urlopen(raw_url)
@@ -159,26 +176,30 @@ class Oekofen(object):
                 if is_text:
                     return raw_data.decode(const.CHARSET)
                 return True
-        except urllib.error.HTTPError as e:
-            #if retry:
-            #    await asyncio.sleep(2.5)
-            #    data = await self._fetch_data(path=path, is_json=is_json, is_text=is_text, retry=False)
-            #    return data
-            #else:
-            #    raise
-            logger.error(e)
-            raise
+        except urllib.error.HTTPError:
+            if retry:
+                time.sleep(2.5)
+                data = self._fetch_data(
+                    path=path, is_json=is_json, is_text=is_text, retry=False
+                )
+                return data
+            else:
+                raise
         except Exception as e:
             logger.error(e)
             raise
 
     def _has_valid_data(self):
-        data_is_old = (datetime.now() - self._last_fetch).total_seconds() >= self.update_interval
+        data_is_old = (
+            datetime.now() - self._last_fetch
+        ).total_seconds() >= self.update_interval
         if (not self._raw_data) or data_is_old:
             return False
         return True
 
-    def _get_value(self, domain: str, attribute: str, domain_index: int = 1, return_attribute=False):
+    def _get_value(
+        self, domain: str, attribute: str, domain_index: int = 1, return_attribute=False
+    ):
         if domain_index < 1:
             return None
         if not self.domains:
@@ -193,60 +214,67 @@ class Oekofen(object):
                 return attribute_instance.get_value()
         return None
 
-    def get_attribute(self, domain: str, attribute: str, domain_index: int = 1) -> Attribute:
-        return self._get_value(domain=domain, attribute=attribute, domain_index=domain_index, return_attribute=True)
+    def get_attribute(
+        self, domain: str, attribute: str, domain_index: int = 1
+    ) -> Attribute:
+        return self._get_value(
+            domain=domain,
+            attribute=attribute,
+            domain_index=domain_index,
+            return_attribute=True,
+        )
 
-    async def _send_set_value(self, domain_attribute: str, value: str):
+    def _send_set_value(self, domain_attribute: str, value: str):
         """
 
         :param domain_attribute: i.e. "hk1.mode_auto"
         :param value: "0"
         :return:
         """
-        path = URL().with_name(f'{domain_attribute}={value}')
-        await self._fetch_data(path=str(path), is_json=False)
+        path = URL().with_name(f"{domain_attribute}={value}")
+        self._fetch_data(path=str(path), is_json=False)
 
-    async def set_attribute_value(self, att: Attribute, value):
+    def set_attribute_value(self, att: Attribute, value):
         if not isinstance(att, ControllableAttribute):
             return False
         val = att.generate_new_value(value=value, value_in_human_format=True)
         if att.domain.index is None:
-            dom_att = f'{att.domain.name}.{att.key}'
+            dom_att = f"{att.domain.name}.{att.key}"
         else:
-            dom_att = f'{att.domain.name}{att.domain.index}.{att.key}'
+            dom_att = f"{att.domain.name}{att.domain.index}.{att.key}"
 
-        await self._send_set_value(domain_attribute=dom_att, value=val)
+        self._send_set_value(domain_attribute=dom_att, value=val)
         return value
 
     # Popular queries
     def get_name(self):
-        return f'Oekofen ({self.host})'
+        return f"Oekofen ({self.host})"
 
     def get_status(self):
         self._status = self._get_value("pe", "L_statetext")
         return self._status
 
     def get_weather_temp(self):
-        return self._get_value('weather', 'L_temp')
+        return self._get_value("weather", "L_temp")
 
     def get_heating_circuit_state(self) -> str:
-        return self._get_value('hk', 'L_statetext')
+        return self._get_value("hk", "L_statetext")
 
     def get_heating_circuit_temp(self) -> float:
-        return self._get_value('hk', 'temp_heat')
+        return self._get_value("hk", "temp_heat")
 
     def get_model(self) -> str:
-        attr = self.get_attribute('pe', 'L_type')
+        attr = self.get_attribute("pe", "L_type")
         return attr.get_choice()
 
     def get_uid(self):
-        model = self.get_model().lower().replace(' ', '_')
-        host = self.host.replace('.', '_')
-        return f'oekofen_{model}_{host}'
+        model = self.get_model().lower().replace(" ", "_")
+        host = self.host.replace(".", "_")
+        return f"oekofen_{model}_{host}"
 
-    async def set_heating_circuit_temp(self, celsius: float, domain_index: int = 1) -> bool:
-        att = self.get_attribute('hk', 'temp_heat', domain_index=domain_index)
-        return await self.set_attribute_value(att, celsius)
+    def set_heating_circuit_temp(self, celsius: float, domain_index: int = 1) -> bool:
+        att = self.get_attribute("hk", "temp_heat", domain_index=domain_index)
+        return self.set_attribute_value(att, celsius)
 
 
 class Domain(object):
@@ -274,9 +302,7 @@ class Attribute(object):
         self.key = key
 
         if isinstance(data, str):
-            data = {
-                const.JSON_KEY_VALUE: data
-            }
+            data = {const.JSON_KEY_VALUE: data}
 
         self.format: str | None = data.get(const.JSON_KEY_FORMAT, None)
         self.raw_value: str | float | int | None = data.get(const.JSON_KEY_VALUE, None)
@@ -291,9 +317,9 @@ class Attribute(object):
             self.choices = const.format2dict(self.format)
 
         # fix '?C' unit:
-        if isinstance(self.unit, str) and self.unit == '?C':
-            self.unit = '°C'
-            
+        if isinstance(self.unit, str) and self.unit == "?C":
+            self.unit = "°C"
+
         # convert numbers in strings to int/float
         if isinstance(self.factor, str):
             self.factor = float(self.factor)
@@ -339,7 +365,7 @@ class Attribute(object):
 
     def get_value_with_unit(self) -> str:
         if self.unit:
-            return f'{self.get_value()} {self.unit}'
+            return f"{self.get_value()} {self.unit}"
         return self.get_value()
 
     def get_choice(self):
@@ -378,16 +404,23 @@ class ControllableAttribute(Attribute):
             if self.factor and value_in_human_format:
                 value = int(value / self.factor)
 
-            if virtual_min is not None and virtual_max is not None and virtual_min <= value <= virtual_max:
+            if (
+                virtual_min is not None
+                and virtual_max is not None
+                and virtual_min <= value <= virtual_max
+            ):
                 print("Okay setting value %s" % value)
                 return value
             else:
-                raise ValueOutOfBoundaryError("setting value %s, min=%s, max=%s" % (value, virtual_min, virtual_max))
+                raise ValueOutOfBoundaryError(
+                    "setting value %s, min=%s, max=%s"
+                    % (value, virtual_min, virtual_max)
+                )
 
         if isinstance(self.raw_value, str) and isinstance(value, str):
             if self.length is not None:
                 if len(value) > self.length:
-                    value = value[:self.length]
+                    value = value[: self.length]
                 return value
 
         return value
@@ -404,5 +437,3 @@ class OekofenAPIException(Exception):
 
 class ValueOutOfBoundaryError(OekofenAPIException):
     pass
-
-
