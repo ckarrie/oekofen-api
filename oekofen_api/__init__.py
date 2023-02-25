@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import asyncio
 from collections import OrderedDict
 import logging
-import aiohttp
 import re
+import json
 from datetime import datetime
 from voluptuous import Optional
 from yarl import URL
+import urllib.request
+import urllib.error
 
 from . import const
 
@@ -141,30 +144,32 @@ class Oekofen(object):
                 self._csv_data[content] = value
         return self._csv_data
 
-    async def _fetch_data(self, path, is_json=True, is_text=False) -> Optional(dict):
+    async def _fetch_data(self, path, is_json=True, is_text=False, retry=True) -> Optional(dict):
         raw_url = f'{self.base_url}{path}'
-        print("_fetch_data", raw_url)
-        async with aiohttp.ClientSession(raise_for_status=True) as session:
-            try:
-                resp = await session.get(raw_url)
-                if resp.status == 200:
-                    # no content type send from host, accepting all with content_type=None
-                    if is_json:
-                        json_response = await resp.json(content_type=None)
-                        if json_response is not None:
-                            return json_response
-                        else:
-                            return None
-                    if is_text:
-                        #body = await resp.read()
-                        #print(body)
-                        #return await resp.text(encoding='latin-1')
-                        return await resp.text()
-                    return True
-
-            except Exception as e:
-                logger.error(e)
+        print("_fetch_data using urllib.request.urlopen", raw_url)
+        try:
+            resp = urllib.request.urlopen(raw_url)
+            raw_data = resp.read()
+            encoding = resp.info().get_content_charset(const.CHARSET)
+            if resp.status == 200:
+                if is_json:
+                    json_data = json.loads(raw_data.decode(encoding))
+                    if json_data is not None:
+                        return json_data
+                    return None
+                if is_text:
+                    return raw_data.decode(const.CHARSET)
+                return True
+        except urllib.error.HTTPError:
+            if retry:
+                await asyncio.sleep(2.5)
+                data = await self._fetch_data(path=path, is_json=is_json, is_text=is_text, retry=False)
+                return data
+            else:
                 raise
+        except Exception as e:
+            logger.error(e)
+            raise
 
     def _has_valid_data(self):
         data_is_old = (datetime.now() - self._last_fetch).total_seconds() >= self.update_interval
@@ -198,7 +203,7 @@ class Oekofen(object):
         :return:
         """
         path = URL().with_name(f'{domain_attribute}={value}')
-        return await self._fetch_data(path=str(path), is_json=False)
+        await self._fetch_data(path=str(path), is_json=False)
 
     async def set_attribute_value(self, att: Attribute, value):
         if not isinstance(att, ControllableAttribute):
@@ -208,8 +213,9 @@ class Oekofen(object):
             dom_att = f'{att.domain.name}.{att.key}'
         else:
             dom_att = f'{att.domain.name}{att.domain.index}.{att.key}'
-        value_set = await self._send_set_value(domain_attribute=dom_att, value=val)
-        return value_set
+
+        await self._send_set_value(domain_attribute=dom_att, value=val)
+        return value
 
     # Popular queries
     def get_name(self):
@@ -282,6 +288,10 @@ class Attribute(object):
         self.domain: Domain = domain
         if self.format:
             self.choices = const.format2dict(self.format)
+
+        # fix '?C' unit:
+        if isinstance(self.unit, str) and self.unit == '?C':
+            self.unit = '°C'
             
         # convert numbers in strings to int/float
         if isinstance(self.factor, str):

@@ -20,13 +20,13 @@ cd ~/workspace/src/oekofen-api
 ```
 
 ### Push git changes
-- Neue Version in der setup.py eintragen 0.0.17
+- Neue Version in der setup.py eintragen 0.0.18
 - Mit git changes pushen!!
 
 ### github Release erstellen
 - https://github.com/ckarrie/oekofen-api/releases/new
-- Tag (create new): v0.0.17
-- Title: v0.0.17
+- Tag (create new): v0.0.18
+- Title: v0.0.18
 - Button "Publish Release"
 
 ### Anpassen in setup.py
@@ -34,7 +34,7 @@ cd ~/workspace/src/oekofen-api
 nano setup.py
 ```
 ```python
-VERSION = "0.0.17"
+VERSION = "0.0.18"
 
 ```
 
@@ -60,7 +60,7 @@ twine upload dist/*
 Lokal updaten
 
 ```
-pip install oekofen-api==0.0.17
+pip install oekofen-api==0.0.18
 ```
 
 ## Update homeassistant-oekofen

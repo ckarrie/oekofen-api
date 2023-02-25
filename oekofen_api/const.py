@@ -7,11 +7,11 @@ from collections import OrderedDict
 ATTR_TYPE_DICT = 'key-value-pair'
 ATTR_TYPE_DESCRIPTION = 'description-text'
 BASE_URL_TMPL = 'http://{host}:{port}/{json_password}/'
-URL_PATH_ALL_WITH_FORMATS = 'all??'
+URL_PATH_ALL_WITH_FORMATS = 'all?'
 RE_FIND_NUMBERS = r'\d+'
 DEFAULT_PORT = 4321
 UPDATE_INTERVAL_SECONDS = 10
-
+CHARSET = 'ISO-8859-1'
 
 # JSON Keys
 JSON_KEY_FORMAT = 'format'

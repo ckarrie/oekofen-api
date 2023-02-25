@@ -11,7 +11,7 @@ import asyncio
 import time
 
 client = oekofen_api.Oekofen("192.168.178.222", "eMlG")
-asyncio.run(client.update_csv_data())
+#asyncio.run(client.update_csv_data())
 asyncio.run(client.get_version())
 
 asyncio.run(client.update_data())
