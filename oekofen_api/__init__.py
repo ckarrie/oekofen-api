@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from collections import OrderedDict
 import logging
 import re
@@ -160,13 +159,15 @@ class Oekofen(object):
                 if is_text:
                     return raw_data.decode(const.CHARSET)
                 return True
-        except urllib.error.HTTPError:
-            if retry:
-                await asyncio.sleep(2.5)
-                data = await self._fetch_data(path=path, is_json=is_json, is_text=is_text, retry=False)
-                return data
-            else:
-                raise
+        except urllib.error.HTTPError as e:
+            #if retry:
+            #    await asyncio.sleep(2.5)
+            #    data = await self._fetch_data(path=path, is_json=is_json, is_text=is_text, retry=False)
+            #    return data
+            #else:
+            #    raise
+            logger.error(e)
+            raise
         except Exception as e:
             logger.error(e)
             raise
