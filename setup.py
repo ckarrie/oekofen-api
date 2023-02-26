@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 with open("README.md", "r") as f:
     long_description = f.read()
 
-VERSION = "0.0.20"
+VERSION = "0.0.21"
 
 setup(
     name="oekofen_api",
@@ -17,7 +17,8 @@ setup(
     url="https://github.com/ckarrie/oekofen-api",
     packages=find_packages(),
     install_requires=[
-        'voluptuous>=0.13.1'
+        'voluptuous>=0.13.1',
+        'yarl~=1.8.2'
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

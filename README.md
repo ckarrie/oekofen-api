@@ -11,7 +11,11 @@ import time
 
 client = oekofen_api.Oekofen("192.168.178.222", "eMlG")
 #client.update_csv_data()
+x = client.update_data()
 client.get_version()
+client.get_uid()
+client.get_model()
+client.get_name()
 
 client.update_data()
 client.get_status()
