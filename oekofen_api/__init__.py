@@ -353,7 +353,7 @@ class Attribute(object):
         if value is not None:
             if self.factor is not None:
                 # i.e. temperature or zs (zehntelsekunden, 0,1 seconds)
-                v = value * self.factor
+                v = float(value) * self.factor
                 return float("{:.2f}".format(round(v, 2)))
             if self.format == const.OFF_ON_TEXT:
                 # bool on/off
