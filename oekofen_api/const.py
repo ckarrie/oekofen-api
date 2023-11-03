@@ -23,6 +23,10 @@ JSON_KEY_MAXIMUM = 'max'
 JSON_KEY_LENGTH = 'length'
 JSON_KEY_READONLY_ATTRIBUTE_PREFIX = 'L_'
 
+# Installateur Code (aka "Codeebene")
+# combination from hour (with leading zeros) and date day (with leading zeros)
+INSTALLATEUR_CODE_FORMAT = '%H%d'
+
 
 def format2dict(value: str) -> dict:
     d = OrderedDict()

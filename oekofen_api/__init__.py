@@ -1,3 +1,5 @@
+"""Oekofen API by Christian Karrié"""
+
 from __future__ import annotations
 
 from collections import OrderedDict
@@ -13,8 +15,7 @@ import urllib.error
 
 from . import const
 
-logger = logging.getLogger(__name__)
-
+_LOGGER = logging.getLogger(__name__)
 
 class Oekofen(object):
     def __init__(
@@ -41,6 +42,17 @@ class Oekofen(object):
         return f"{cls_name}({self.host})"
 
     def update_data(self):
+        """
+        - fetches the raw json from oekofen
+        - flatten the received data to self.data
+
+              "hk1.hk_info":"heating circuit data",
+              "hk1.L_roomtemp_act":0.0,
+              "hk1.L_roomtemp_act_min":-3276.8,
+              "hk1.L_roomtemp_act_max":3276.7,
+
+              dict-key = "<domain><domain_index>.<attribute>"
+        """
         if not self._has_valid_data():
             self._raw_data = self._fetch_data(
                 path=const.URL_PATH_ALL_WITH_FORMATS, is_json=True
@@ -48,11 +60,17 @@ class Oekofen(object):
             self._last_fetch = datetime.now()
             self.domains = OrderedDict()
 
+            metadata = {
+                'ip_host': self.host,
+                'installateur_code': self.get_installateur_code()
+            }
+
             self.data = {
                 "system_indexes": [""],  # empty domain
                 "weather_indexes": [""],  # empty domain
                 "forecast_indexes": [""],  # empty domain
                 "error_indexes": [""],  # empty domain
+                "meta_indexes": [""],  # empty domain, injected
                 "hk_indexes": [],
                 "pu_indexes": [],
                 "ww_indexes": [],
@@ -60,6 +78,8 @@ class Oekofen(object):
                 "pe_indexes": [],
                 "sk_indexes": [],
             }
+
+            _LOGGER.debug("[oekfoen_api.update_data] init_data=%s", self.data)
 
             # Domain part
             for domain_with_index, attributes_dict in self._raw_data.items():
@@ -105,7 +125,12 @@ class Oekofen(object):
                             f"{domain_with_index}.{att_key}_max"
                         ] = att_instance.get_max_value()
 
+            # injecting metadata Part
+            for k, v in metadata.items():
+                self.data[f'meta.{k}'] = v
+
             if isinstance(self.data, dict) and "system.system_info" in self.data:
+                #_LOGGER.debug("update_data=%s", self.data)
                 return self.data
 
     def get_version(self):
@@ -126,13 +151,13 @@ class Oekofen(object):
 
         dt_day = datetime.now().replace(microsecond=0)
 
-        print("len(first_line_splitted)", len(first_line_splitted))
-        print("len(last_line_splitted)", len(last_line_splitted))
+        _LOGGER.info("[Oekofen.update_csv_data] len(first_line_splitted)=%d", len(first_line_splitted))
+        _LOGGER.info("[Oekofen.update_csv_data] len(last_line_splitted)=%d", len(last_line_splitted))
 
         for col, content in enumerate(first_line_splitted):
             content = content.replace("[»C]", "[°C]")
             raw_value = last_line_splitted[col]
-            print("- ", col, content, raw_value)
+            _LOGGER.debug("- %s %s %s", col, content, raw_value)
             if "," in raw_value:
                 value = float(raw_value.replace(",", "."))
             elif "." in raw_value and len(raw_value.split(".")) == 3:
@@ -162,7 +187,7 @@ class Oekofen(object):
         self, path, is_json=True, is_text=False, retry=True
     ) -> Optional(dict):
         raw_url = f"{self.base_url}{path}"
-        print("_fetch_data using urllib.request.urlopen", raw_url)
+        _LOGGER.info("[Oekofen._fetch_data] using urllib.request.urlopen url=%s", raw_url)
         try:
             resp = urllib.request.urlopen(raw_url)
             raw_data = resp.read()
@@ -186,7 +211,7 @@ class Oekofen(object):
             else:
                 raise
         except Exception as e:
-            logger.error(e)
+            _LOGGER.error(e)
             raise
 
     def _has_valid_data(self):
@@ -276,6 +301,10 @@ class Oekofen(object):
         att = self.get_attribute("hk", "temp_heat", domain_index=domain_index)
         return self.set_attribute_value(att, celsius)
 
+    @staticmethod
+    def get_installateur_code():
+        return datetime.now().strftime(const.INSTALLATEUR_CODE_FORMAT)
+
 
 class Domain(object):
     def __init__(self, oekofen: Oekofen, name: str, index: int):
@@ -315,6 +344,7 @@ class Attribute(object):
         self.domain: Domain = domain
         if self.format:
             self.choices = const.format2dict(self.format)
+        self.attributes = {}
 
         # fix '?C' unit:
         if isinstance(self.unit, str) and self.unit == "?C":
@@ -343,6 +373,21 @@ class Attribute(object):
             else:
                 self.raw_value = int(self.raw_value)
 
+        # handle thirdparty (shelly) temp sensors
+        if self.domain.name == 'thirdparty' and '|' in self.raw_value and self.key == 'L_state':
+            p = self.raw_value.split('|')
+            self.attributes = {
+                'type_id': p[0],
+                'device_id': p[1],
+                'device_id2': p[2],
+                'temp_capable': p[3],
+                'temp_value': p[4],
+                'humidity_value': p[5],
+                'unknown_value1': p[6],
+                'unknown_value2': p[7],
+                'device_ip': p[8],
+            }
+
     def __repr__(self):
         cls_name = self.__class__.__name__
         return f"{cls_name}({self.key}={self.get_value_with_unit()})"
@@ -355,6 +400,10 @@ class Attribute(object):
                 # i.e. temperature or zs (zehntelsekunden, 0,1 seconds)
                 v = float(value) * self.factor
                 return float("{:.2f}".format(round(v, 2)))
+            # handle thirdparty shelly temp sensors
+            if self.domain.name == 'thirdparty' and '|' in self.raw_value and self.key == 'L_state':
+                temp_sensor = float(int(self.raw_value.split('|')[4]) / 10)
+                return temp_sensor
             if self.format == const.OFF_ON_TEXT:
                 # bool on/off
                 if value == 0:
@@ -409,7 +458,7 @@ class ControllableAttribute(Attribute):
                 and virtual_max is not None
                 and virtual_min <= value <= virtual_max
             ):
-                print("Okay setting value %s" % value)
+                _LOGGER.info("[ControllableAttribute.generate_new_value] Okay setting value %s", value)
                 return value
             else:
                 raise ValueOutOfBoundaryError(
