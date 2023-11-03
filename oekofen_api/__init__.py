@@ -379,12 +379,12 @@ class Attribute(object):
             self.attributes = {
                 'type_id': p[0],
                 'device_id': p[1],
-                'device_id2': p[2],
+                'device_id_2': p[2],
                 'temp_capable': p[3],
-                'temp_value': p[4],
-                'humidity_value': p[5],
-                'unknown_value1': p[6],
-                'unknown_value2': p[7],
+                'temperature': p[4],
+                'humidity': p[5],
+                'battery': p[6],
+                'timestamp': p[7],
                 'device_ip': p[8],
             }
 
